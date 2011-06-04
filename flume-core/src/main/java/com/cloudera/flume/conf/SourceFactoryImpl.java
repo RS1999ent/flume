@@ -57,6 +57,9 @@ import com.cloudera.flume.handlers.thrift.ThriftEventSource;
 import com.cloudera.flume.handlers.twitter.TwitterStreamSource;
 import com.cloudera.util.Pair;
 
+import com.cloudera.flume.handlers.UdpSource;
+import com.cloudera.flume.handlers.xtrace.XTraceUdpSource;
+
 /**
  * This factory creates event sources. It currently requires a recompile when
  * new sources are added.
@@ -75,6 +78,7 @@ public class SourceFactoryImpl extends SourceFactory {
       { "null", NullSource.builder() },
       { "stdin", StdinSource.builder() },
       { "console", JLineStdinSource.builder() },
+      { "udp", UdpSource.builder() },
 
       // creates AvroEventSource or ThriftEventSource
       { "rpcSource", RpcSource.builder() },
@@ -102,6 +106,7 @@ public class SourceFactoryImpl extends SourceFactory {
       // fun but unsupported officially.
       { "twitter", TwitterStreamSource.builder() },
       { "irc", IrcSource.builder() },
+      { "xtraceUdp", XTraceUdpSource.builder() },
 
       // experimental / Cloudera SA only.
       { "tpriosource", PrioritizedThriftEventSource.builder() },
