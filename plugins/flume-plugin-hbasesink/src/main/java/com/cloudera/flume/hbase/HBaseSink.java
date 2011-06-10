@@ -189,9 +189,9 @@ public class HBaseSink extends EventSink.Base {
           spec.add(qs);
         }
 
-        String bufSzStr = context.getValue(KW_BUFFER_SIZE);
+        //String bufSzStr = context.getValue(KW_BUFFER_SIZE);
         String isWriteToWal = context.getValue(KW_USE_WAL);
-        long bufSz = (bufSzStr == null ? 0 : Long.parseLong(bufSzStr));
+        long bufSz = 4194304;//(bufSzStr == null ? 0 : Long.parseLong(bufSzStr));
 
         return new HBaseSink(tableName, rowKey, spec, bufSz,
             Boolean.parseBoolean(isWriteToWal), HBaseConfiguration.create());
