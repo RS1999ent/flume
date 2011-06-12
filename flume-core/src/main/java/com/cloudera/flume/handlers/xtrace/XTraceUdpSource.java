@@ -117,6 +117,21 @@ public class XTraceUdpSource extends EventSource.Base {
           } else if (pair[0].equals("Label")) {
             e.set("inst_pt_name", pair[1].getBytes("UTF-8"));
             e.set("value", "1".getBytes("UTF-8"));
+          } else if (pair[0].equals("TaskID")) {
+            if (pair[1].equals("UNKNOWN")) {
+              LOG.warn("Received trace from unknown place");
+            } else if (pair[1].indexOf("_") == -1) {
+              jobId = pair[1];
+            } else {
+              String[] parts = pair[1].split("_");
+              if (parts.length != 5) {
+                LOG.warn("task id is not in expected format");
+                jobId = pair[1];
+              } else {
+                jobId = parts[1] + "_" + parts[2];
+                clientId = parts[3] + "_" + parts[4];
+              }
+            }
           } else {
             e.set(pair[0], pair[1].getBytes("UTF-8"));
           }
