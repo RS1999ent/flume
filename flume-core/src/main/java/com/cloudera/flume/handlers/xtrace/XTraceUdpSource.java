@@ -81,8 +81,9 @@ public class XTraceUdpSource extends EventSource.Base {
         e = new EventImpl();
         Scanner sc = new Scanner(s);
         sc.nextLine();
-        String jobId = "0";
-        String clientId = "0";
+        //String jobId = "0";
+        //String clientId = "0";
+        String tId = "0";
         String parentList = "";
         String timeStamp = "";
         String taskId = "";
@@ -120,18 +121,21 @@ public class XTraceUdpSource extends EventSource.Base {
           } else if (pair[0].equals("TaskID")) {
             if (pair[1].equals("UNKNOWN")) {
               LOG.warn("Received trace from unknown place");
-            } else if (pair[1].indexOf("_") == -1) {
+            }
+            tId = pair[1];
+            /*else if (pair[1].indexOf("_") == -1) {
               jobId = pair[1];
             } else {
               String[] parts = pair[1].split("_");
-              if (parts.length != 5) {
-                LOG.warn("task id is not in expected format");
+              if (parts.length <= 3) {
                 jobId = pair[1];
               } else {
                 jobId = parts[1] + "_" + parts[2];
-                clientId = parts[3] + "_" + parts[4];
+                clientId = parts[3];
+                for (int i = 4; i < parts.length; i++)
+                  clientId += "_" + parts[i];
               }
-            }
+            }*/
           } else {
             e.set(pair[0], pair[1].getBytes("UTF-8"));
           }
@@ -139,7 +143,8 @@ public class XTraceUdpSource extends EventSource.Base {
         if (e == null)
           continue;
         e.set("Edge", parentList.getBytes("UTF-8"));
-        String rowkey = jobId + "|" + clientId + "|" + taskId + "|" + (parentList.equals("") ? "" : parentList + ",") + reportId + "|" + timeStamp;
+        //String rowkey = jobId + "|" + clientId + "|" + taskId + "|" + (parentList.equals("") ? "" : parentList + ",") + reportId + "|" + timeStamp;
+        String rowkey = tId + "|" + taskId + "|" + (parentList.equals("") ? "" : parentList + ",") + reportId + "|" + timeStamp;
         e.set("rowkey", rowkey.getBytes("UTF-8"));
       }
     } while (e == null);
