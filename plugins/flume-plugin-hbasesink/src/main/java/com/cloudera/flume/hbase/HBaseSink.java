@@ -88,6 +88,10 @@ public class HBaseSink extends EventSink.Base {
 
   private HTable table;
 
+  private boolean isRunning;
+  private static final int sleepInterval = 5000;
+  private Flusher flusher;
+
   public HBaseSink(String tableName, String rowkey, List<QualifierSpec> spec) {
     this(tableName, rowkey, spec, 0L, true, HBaseConfiguration.create());
   }
@@ -102,6 +106,7 @@ public class HBaseSink extends EventSink.Base {
     this.writeBufferSize = writeBufferSize;
     this.writeToWal = writeToWal;
     this.config = config;
+    this.isRunning = false;
   }
 
   @Override
@@ -117,15 +122,27 @@ public class HBaseSink extends EventSink.Base {
     }
 
     p.setWriteToWAL(writeToWal);
-    table.put(p);
+    synchronized(table) {
+      table.put(p);
+    }
   }
 
   @Override
   synchronized public void close() throws IOException {
     if (table != null) {
+      isRunning = false;
+      flusher.interrupt();
+      while(true) {
+        try {
+          flusher.join();
+          break;
+        } catch (InterruptedException e) {
+        }
+      }
       table.close(); // performs flushCommits() internally, so we are good when
                      // autoFlush=false
       table = null;
+      flusher = null;
       LOG.info("HBase sink successfully closed");
     } else {
       LOG.warn("Double close of HBase sink");
@@ -147,6 +164,9 @@ public class HBaseSink extends EventSink.Base {
       table.setWriteBufferSize(writeBufferSize);
     }
     validateColFams(table);
+    isRunning = true;
+    flusher = new Flusher();
+    flusher.start();
     LOG.info("HBase sink successfully opened");
   }
 
@@ -191,7 +211,8 @@ public class HBaseSink extends EventSink.Base {
 
         //String bufSzStr = context.getValue(KW_BUFFER_SIZE);
         String isWriteToWal = context.getValue(KW_USE_WAL);
-        long bufSz = 4194304;//(bufSzStr == null ? 0 : Long.parseLong(bufSzStr));
+        long bufSz = 4194304;
+        //long bufSz = 0;//(bufSzStr == null ? 0 : Long.parseLong(bufSzStr));
 
         return new HBaseSink(tableName, rowKey, spec, bufSz,
             Boolean.parseBoolean(isWriteToWal), HBaseConfiguration.create());
@@ -203,5 +224,23 @@ public class HBaseSink extends EventSink.Base {
   public static List<Pair<String, SinkFactory.SinkBuilder>> getSinkBuilders() {
     return Arrays.asList(new Pair<String, SinkFactory.SinkBuilder>("hbase",
         builder()));
+  }
+
+  private class Flusher extends Thread {
+    @Override
+    public void run() {
+      while(isRunning) {
+        try {
+          sleep(sleepInterval);
+          synchronized (table) {
+            try {
+              table.flushCommits();
+            } catch (IOException e) {
+            }
+          }
+        } catch (InterruptedException e) {
+        }
+      }
+    }
   }
 }
